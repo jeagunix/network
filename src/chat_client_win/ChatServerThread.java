@@ -1,4 +1,4 @@
-package chat;
+package chat_client_win;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -31,23 +31,23 @@ public class ChatServerThread extends Thread {
 			// 4. I/O Stream 생성
 			br = new BufferedReader(new InputStreamReader(socket.getInputStream(), "UTF-8"));
 			pw = new PrintWriter(new OutputStreamWriter(socket.getOutputStream(), "UTF-8"), true);// true
-																									// 쌓아두지말고
-																									// 한번쓰면
-																									// 보내라(flush).
+																												// 쌓아두지말고
+																												// 한번쓰면
+																												// 보내라(flush).
 			while (true) {
 
 				// 5. 데이터 읽기(수신)
 				String request = br.readLine();
 				if (request == null) {
 					ChatServer.log("클라언트로부터 연결 끊김");
-					
+					doQuit(pw);
 					break;
 				}
 
 				String[] tokens = request.split(":");
 
 				if ("join".equals(tokens[0])) {
-
+					
 					doJoin(tokens[1], pw);
 				} else if ("message".equals(tokens[0])) {
 					doMessage(tokens[1]);
@@ -80,7 +80,7 @@ public class ChatServerThread extends Thread {
 
 	private void doJoin(String nickname, Writer writer) {
 		this.nickname = nickname;
-
+		
 		String data = nickname + "님이 참여하였습니다.";
 		broadcast(data);
 		// writer pool에 저장
@@ -110,7 +110,7 @@ public class ChatServerThread extends Thread {
 	}
 
 	private void doMessage(String message) {
-		broadcast(nickname + ": " + message);
+		broadcast(message);
 	}
 
 	private void doQuit(Writer writer) {

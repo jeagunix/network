@@ -1,4 +1,4 @@
-package chat;
+package chat_client_win;
 
 import java.io.IOException;
 import java.io.Writer;
@@ -20,10 +20,10 @@ public class ChatServer {
 		ServerSocket serverSocket = null;
 		try {
 			serverSocket = new ServerSocket();
-
+			
 			// 2.Binding : Socket에 SocketAddress(IpAddres + port) 바인딩한다.
 			serverSocket.bind(new InetSocketAddress("127.0.0.1", PORT));
-
+		
 			// 3.클라이언트로부터 연결요청(connect)를 기다린다.
 			while (true) {
 				Socket socket = serverSocket.accept(); // blocking

@@ -1,4 +1,5 @@
-package test.chat.client.win;
+package chat_client_win;
+
 import java.awt.BorderLayout;
 import java.awt.Button;
 import java.awt.Color;
@@ -20,39 +21,67 @@ import java.io.PrintWriter;
 import java.net.Socket;
 import java.net.SocketException;
 
-public class ChatWindow {
+public class ChatWindow extends Thread {
+	private Socket socket;
 	private Frame frame;
 	private Panel pannel;
 	private Button buttonSend;
 	private TextField textField;
 	private TextArea textArea;
-	
-	private Socket socket;
-	
-	private PrintWriter writer;
-	private BufferedReader reader; 
-	
-	public ChatWindow(String nickname, Socket socket) {
-		frame = new Frame(nickname);
+	private PrintWriter pw = null;
+	private BufferedReader br = null;
+	private String name = null;
+
+	public ChatWindow() {
+
+	}
+
+	public ChatWindow(String name, Socket socket) {
+		this.socket = socket;
+		this.name = name;
+		frame = new Frame(name);
 		pannel = new Panel();
 		buttonSend = new Button("Send");
 		textField = new TextField();
 		textArea = new TextArea(30, 80);
-		
-		this.socket = socket;
 	}
 
-	public void show() throws IOException{
-		//
-		// 1. UI 초기화
-		//
-		
+	@Override
+	public void run() {
+		try {
+			pw = new PrintWriter(new OutputStreamWriter(socket.getOutputStream(), "UTF-8"), true);
+			br = new BufferedReader(new InputStreamReader(socket.getInputStream(), "UTF-8"));
+			while (true) {
+				String msg = br.readLine();
+
+				if (msg == null) {
+					break;
+				}
+				updateTextArea(msg);
+			}
+		} catch (SocketException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		} finally {
+			if (socket != null && socket.isClosed() == false) {
+				try {
+					socket.close();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
+		}
+	}
+
+	public void show() {
+
 		// Button
 		buttonSend.setBackground(Color.GRAY);
 		buttonSend.setForeground(Color.WHITE);
-		buttonSend.addActionListener( new ActionListener() {
+		buttonSend.addActionListener(new ActionListener() {
 			@Override
-			public void actionPerformed(ActionEvent e) {
+			public void actionPerformed(ActionEvent actionEvent) {
 				sendMessage();
 			}
 		});
@@ -60,13 +89,15 @@ public class ChatWindow {
 		// Textfield
 		textField.setColumns(80);
 		textField.addKeyListener(new KeyAdapter() {
+
 			@Override
-			public void keyPressed(KeyEvent event) {
-				char keyCode = event.getKeyChar();
-				if(keyCode == KeyEvent.VK_ENTER) {
+			public void keyPressed(KeyEvent e) {
+				char keyCode = e.getKeyChar();
+				if (keyCode == KeyEvent.VK_ENTER) {
 					sendMessage();
 				}
 			}
+
 		});
 
 		// Pannel
@@ -82,75 +113,33 @@ public class ChatWindow {
 		// Frame
 		frame.addWindowListener(new WindowAdapter() {
 			public void windowClosing(WindowEvent e) {
-				finish();
+				System.exit(0);
 			}
 		});
-		
 		frame.setVisible(true);
 		frame.pack();
-		
-		//
-		// 2. IOStream 생성
-		//
-		writer = new PrintWriter( new OutputStreamWriter(socket.getOutputStream(), "UTF-8" ), true );
-		reader = new BufferedReader( new InputStreamReader(socket.getInputStream(), "UTF-8" ));
-	
-		//
-		// 3. Chat Client Thread 생성
-		//
-		new ChatClientThread().start();
+		this.run();
 	}
-	
-	private void finish() {
-		try {
-			// Socket 닫기
-			if(socket!= null && socket.isClosed() == false) {
-				socket.close();
-			}
-			
-			// 애플리케이션 종료
-			System.exit(0);
-			
-		} catch(Exception ex) {
-			ex.printStackTrace();
-		}
-	}
-	
+
 	private void updateTextArea(String message) {
-		textArea.append(message);
+		textArea.append(name + ":" + message);
 		textArea.append("\n");
 	}
-	
+
 	private void sendMessage() {
 		String message = textField.getText();
-		writer.println( "MESSAGE:" + message );
+		System.out.println(message);
 
+		if ("quit".equals(message)) {
+			pw.println("quit");
+			// 8. quit프로토콜 시작
+
+		}
+		if ("".equals(message) == false) {
+			pw.println("message:" + message);
+		}
+		
 		textField.setText("");
 		textField.requestFocus();
-	}
-	
-	private class ChatClientThread extends Thread {
-		@Override
-		public void run() {
-			try{
-				while( true ) {
-					String message = reader.readLine();
-					if( message == null ) {
-						break;
-					}
-					
-					Thread.sleep(1);
-					updateTextArea(message);
-				}
-			} catch (InterruptedException e) {
-				e.printStackTrace();
-			}catch(SocketException ex){
-				ChatClientApp.consoleLog( "" + ex );	
-			} catch(IOException ex){
-				ChatClientApp.consoleLog( "" + ex );	
-			} finally {
-				finish();
-			}
-		}
 	}
 }
